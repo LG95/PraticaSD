@@ -19,6 +19,9 @@ public class AnelMultithread extends Thread {
 			else
 				message[i] = (char) ('a' + generator.nextInt(26));
 		}
+
+		currentThread = new AtomicInteger(0);
+		running = new AtomicBoolean(true);
 	}
 
 	public AnelMultithread(int id) {
@@ -26,15 +29,28 @@ public class AnelMultithread extends Thread {
 	}
 
 	public void run() {
+		boolean found;
+
 		while ( running.get() ) {
 			try {
-				if (currentThread.get() == this.id) {
-					System.out.println("Thread " + this.id);
+				if (currentThread.get() % threads.length == this.id) {
+					System.out.println("Thread " + this.id + ":\t" + new String(message));
+
+					found = false;
+
+					for (int i = 0; !found && (i < message.length); i++) {
+						found = (message[i] >= 'a') && (message[i] <= 'z');
+
+						if (found)
+							message[i] += ('A' - 'a');
+					}
+
+					if (!found)
+						running.set(false);
+
+					Thread.currentThread().sleep(1000);
 					currentThread.incrementAndGet();
 				}
-
-				else if (currentThread.get() >= threads.length)
-					running.set(false);
 
 				else
 					Thread.currentThread().sleep(100);
@@ -45,9 +61,6 @@ public class AnelMultithread extends Thread {
 	}
 
 	public static void main(String[] args) {
-		currentThread = new AtomicInteger(0);
-		running = new AtomicBoolean(true);
-
 		for (int i = 0; i < threads.length; i++) {
 			threads[i] = new AnelMultithread(i);
 			threads[i].start();

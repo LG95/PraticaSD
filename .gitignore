@@ -91,3 +91,6 @@ ENV/
 # Sublime Text project files
 *.sublime-project
 *.sublime-workspace
+
+# Java class files
+*.class

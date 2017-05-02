@@ -1,7 +1,12 @@
 import java.util.Random;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class AnelMultithread extends Thread {
+	private static AnelMultithread[] threads = new AnelMultithread[30];
 	private static char[] message = new char[80];
+	private static AtomicInteger currentThread;
+	private static AtomicBoolean running;
 	private int id;
 
 	static {
@@ -21,18 +26,34 @@ public class AnelMultithread extends Thread {
 	}
 
 	public void run() {
-		System.out.println("Thread " + this.id);
+		while ( running.get() ) {
+			try {
+				if (currentThread.get() == this.id) {
+					System.out.println("Thread " + this.id);
+					currentThread.incrementAndGet();
+				}
+
+				else if (currentThread.get() >= threads.length)
+					running.set(false);
+
+				else
+					Thread.currentThread().sleep(100);
+			}
+
+			catch (InterruptedException e) {}
+		}
 	}
 
 	public static void main(String[] args) {
-		AnelMultithread[] threads = new AnelMultithread[30];
+		currentThread = new AtomicInteger(0);
+		running = new AtomicBoolean(true);
 
-		for (int i = 0; i < 30; i++) {
+		for (int i = 0; i < threads.length; i++) {
 			threads[i] = new AnelMultithread(i);
 			threads[i].start();
 		}
 
-		for (int i = 0; i < 30; i++) {
+		for (int i = 0; i < threads.length; i++) {
 			try {
 				threads[i].join();
 			}

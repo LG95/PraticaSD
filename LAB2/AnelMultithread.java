@@ -20,9 +20,26 @@ public class AnelMultithread extends Thread {
 		this.id = id;
 	}
 
-	public void run() {}
+	public void run() {
+		System.out.println("Thread " + this.id);
+	}
 
 	public static void main(String[] args) {
+		AnelMultithread[] threads = new AnelMultithread[30];
+
+		for (int i = 0; i < 30; i++) {
+			threads[i] = new AnelMultithread(i);
+			threads[i].start();
+		}
+
+		for (int i = 0; i < 30; i++) {
+			try {
+				threads[i].join();
+			}
+
+			catch (InterruptedException e) {}
+		}
+
 		System.out.println("Final mesage:\t" + new String(message));
 	}
 }

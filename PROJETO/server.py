@@ -8,7 +8,8 @@ class GraphDatabaseHandler(object):
 		self.__edges = dict()
 
 	def __repr__(self):
-		return "Nodes = {}\nEdges = {}".format(self.__nodes, self.__edges)
+		return "Nodes = {}\nEdges = {}".format(list( self.__nodes.keys() ),
+												list( self.__edges.keys() ))
 
 	def createNode(self, node):
 		if node.id not in self.__nodes:
@@ -31,25 +32,17 @@ class GraphDatabaseHandler(object):
 		else: return False
 
 	def deleteNode(self, node_id):
-		try:
-			self.__nodes.pop(node_id)
+		self.__nodes.pop(node_id, None)
 
-			for edge in self.__edges.keys():
-				if node_id in edge:
-					self.__edges.pop(edge)
-
-			return True
-
-		except KeyError: return False
+		for edge in self.__edges.keys():
+			if node_id in edge:
+				self.__edges.pop(edge, None)
 
 	def createEdge(self, edge):
 		key = (edge.node1, edge.node2)
 
 		if edge.node1 in self.__nodes and edge.node2 in self.__nodes and key not in self.__edges:
 			self.__edges[key] = edge
-			return True
-
-		else: return False
 
 	def readEdge(self, node1, node2):
 		try: return self.__edges[ (node1, node2) ]
@@ -62,16 +55,9 @@ class GraphDatabaseHandler(object):
 			self.__edges[key].description = description
 			self.__edges[key].direction = direction
 			self.__edges[key].weight = weight
-			return True
-
-		else: return False
 
 	def deleteEdge(self, node1, node2):
-		try:
-			self.__edges.pop( (node1, node2) )
-			return True
-
-		except KeyError: return False
+		self.__edges.pop((node1, node2), None)
 
 	def listNodesEdge(self, node1, node2):
 		key = (node1, node2)
@@ -85,28 +71,26 @@ class GraphDatabaseHandler(object):
 		neighbors = []
 
 		for node1, node2 in self.__edges.keys():
-			if node_id == node1:
-				neighbors.append(node2)
-
-			elif node_id == node2:
-				neighbors.append(node1)
+			if node_id == node1: neighbors.append( self.__nodes[node2] )
+			elif node_id == node2: neighbors.append( self.__nodes[node1] )
 
 		return neighbors
 
 if __name__ == '__main__':
-	from thrift.transport.TSocket 			import TServerSocket
-	from thrift.transport.TTransport 		import TBufferedTransportFactory
-	from thrift.protocol.TBinaryProtocol 	import TBinaryProtocolFactory
-	from thrift.server.TServer 				import TSimpleServer
+	from thrift.transport.TSocket 		 import TServerSocket
+	from thrift.transport.TTransport 	 import TBufferedTransportFactory
+	from thrift.protocol.TBinaryProtocol import TBinaryProtocolFactory
+	from thrift.server.TServer 			 import TSimpleServer
 
 	from distributed.Graph import Processor
 
-	processor = Processor( GraphDatabaseHandler() )
-	transport = TServerSocket(port = 13579)
-	tfactory = TBufferedTransportFactory()
-	pfactory = TBinaryProtocolFactory()
-	server = TSimpleServer(processor, transport, tfactory, pfactory)
+	handler		= GraphDatabaseHandler()
+	processor	= Processor(handler)
+	transport	= TServerSocket(port = 13579)
+	tfactory	= TBufferedTransportFactory()
+	pfactory	= TBinaryProtocolFactory()
+	server		= TSimpleServer(processor, transport, tfactory, pfactory)
 
 	try: server.serve()
 	except KeyboardInterrupt: pass
-	finally: print('Good bye!')
+	finally: print(handler)

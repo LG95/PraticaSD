@@ -16,7 +16,7 @@ def main(graphs):
 	for node_id in sample(ids, 5):
 		graphs.updateNode(node_id, 1, "*", 1.0)
 
-	for _ in xrange(10):
+	for _ in xrange(25):
 		graphs.updateEdge(choice(ids), choice(ids), 1.0, True, "*")
 
 	for node_id in sample(ids, 5):
@@ -26,31 +26,24 @@ def main(graphs):
 		graphs.deleteEdge(choice(ids), choice(ids))
 
 	for node_id in sample(ids, 5):
-		print( graphs.readNode(node_id) )
+		node = graphs.readNode(node_id)
+		if node.id is not None: print(node)
 
-	for _ in xrange(10):
+	for _ in xrange(25):
 		edge = graphs.readEdge(choice(ids), choice(ids))
+		if edge.node1 is not None: print(edge)
 
-		if edge.node1:
-			print(edge)
-
-	for _ in xrange(10):
+	for _ in xrange(50):
 		nodes = graphs.listNodesEdge(choice(ids), choice(ids))
-
-		if nodes:
-			print(nodes)
+		if nodes != []: print(nodes)
 
 	for node_id in sample(ids, 5):
 		edges = graphs.listEdgesNode(node_id)
-
-		if edges:
-			print(edges)
+		if edges != []: print(edges)
 
 	for node_id in sample(ids, 5):
 		neighbors = graphs.listNeighborNodes(node_id)
-
-		if neighbors:
-			print(neighbors)
+		if neighbors != []: print(neighbors)
 
 if __name__ == '__main__':
 	from thrift.transport.TSocket		 import TSocket
@@ -67,3 +60,8 @@ if __name__ == '__main__':
 	transport.open()
 	main(client)
 	transport.close()
+
+	# from server import GraphDatabaseHandler
+
+	# with GraphDatabaseHandler() as handler:
+	# 	main(handler)

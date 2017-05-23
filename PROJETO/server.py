@@ -6,7 +6,7 @@ from sqlite3 import connect, IntegrityError, OperationalError
 
 class GraphDatabaseHandler(object):
 	def __init__(self):
-		self.__database = connect(":memory:")
+		self.__database = connect("graphs.db")
 
 		try:
 			with open("create.sql") as script:

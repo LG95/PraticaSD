@@ -2,77 +2,114 @@ from __future__ import print_function, unicode_literals
 
 from distributed.ttypes import Edge, Node
 
+from sqlite3 import connect, IntegrityError, OperationalError
+
 class GraphDatabaseHandler(object):
 	def __init__(self):
-		self.__nodes = dict()
-		self.__edges = dict()
+		self.__database = connect(":memory:")
 
-	def __repr__(self):
-		return "Nodes = {}\nEdges = {}".format(list( self.__nodes.keys() ),
-												list( self.__edges.keys() ))
+		try:
+			with open("create.sql") as script:
+				self.__database.executescript( "".join(script) )
+
+		except OperationalError: pass
+		finally: self.__database.commit()
+
+	def __enter__(self):
+		return self
+
+	def __exit__(self, *args):
+		self.__database.close()
 
 	def createNode(self, node):
-		if node.id not in self.__nodes:
-			self.__nodes[node.id] = node
-			return True
-
-		else: return False
+		try:
+			self.__database.execute("INSERT INTO nodes VALUES (?, ?, ?, ?)",
+									 (node.id, node.color, node.description, node.weight))
+		except IntegrityError: pass
+		finally: self.__database.commit()
 
 	def readNode(self, node_id):
-		try: return self.__nodes[node_id]
-		except KeyError: return Node()
+		cursor = self.__database.cursor()
+		cursor.execute("SELECT * FROM nodes WHERE id = ?", [node_id])
+		data = cursor.fetchone()
+
+		if data is not None: return Node(*data)
+		else: return Node()
 
 	def updateNode(self, node_id, color, description, weight):
-		if node_id in self.__nodes:
-			self.__nodes[node_id].color = color
-			self.__nodes[node_id].description = description
-			self.__nodes[node_id].weight = weight
-			return True
-
-		else: return False
+		try:
+			self.__database.execute("UPDATE nodes SET color = ?, description = ?, weight = ? WHERE id = ?",
+									(color, description, weight, node_id))
+		finally: self.__database.commit()
 
 	def deleteNode(self, node_id):
-		self.__nodes.pop(node_id, None)
-
-		for edge in self.__edges.keys():
-			if node_id in edge:
-				self.__edges.pop(edge, None)
+		try:
+			self.__database.execute("DELETE FROM nodes WHERE id = ?", [node_id])
+			self.__database.execute("DELETE FROM edges WHERE node1 = ? or node2 = ?",
+									(node_id, node_id))
+		finally: self.__database.commit()
 
 	def createEdge(self, edge):
-		key = (edge.node1, edge.node2)
-
-		if edge.node1 in self.__nodes and edge.node2 in self.__nodes and key not in self.__edges:
-			self.__edges[key] = edge
+		try:
+			self.__database.execute("INSERT INTO edges VALUES (?, ?, ?, ?, ?)",
+									 (edge.node1, edge.node2, edge.weight, edge.direction, edge.description))
+		except IntegrityError: pass
+		finally: self.__database.commit()
 
 	def readEdge(self, node1, node2):
-		try: return self.__edges[ (node1, node2) ]
-		except KeyError: return Edge()
+		cursor = self.__database.cursor()
+		cursor.execute("SELECT * FROM edges WHERE node1 = ? and node2 = ?", (node1, node2))
+		data = cursor.fetchone()
+
+		if data is not None: return Edge(*data)
+		else: return Edge()
 
 	def updateEdge(self, node1, node2, weight, direction, description):
-		key = (node1, node2)
-
-		if key in self.__edges:
-			self.__edges[key].description = description
-			self.__edges[key].direction = direction
-			self.__edges[key].weight = weight
+		try:
+			self.__database.execute("UPDATE edges SET weight = ?, direction = ?, description = ? WHERE node1 = ? and node2 = ?",
+									(weight, direction, description, node1, node2))
+		finally: self.__database.commit()
 
 	def deleteEdge(self, node1, node2):
-		self.__edges.pop((node1, node2), None)
+		try:
+			self.__database.execute("DELETE FROM edges WHERE node1 = ? or node2 = ?",
+									(node1, node2))
+		finally: self.__database.commit()
 
 	def listNodesEdge(self, node1, node2):
-		key = (node1, node2)
-		if key in self.__edges: return [self.__nodes[node1], self.__nodes[node2]]
-		else: return []
+		nodes = []
+		cursor = self.__database.cursor()
+		cursor.execute("SELECT * FROM edges WHERE node1 = ? and node2 = ?", (node1, node2))
+
+		if cursor.fetchone() is not None:
+			cursor.execute("SELECT * FROM nodes WHERE id = ?", [node1])
+			nodes.append( Node( *cursor.fetchone() ) )
+
+			cursor.execute("SELECT * FROM nodes WHERE id = ?", [node2])
+			nodes.append( Node( *cursor.fetchone() ) )
+
+		return nodes
 
 	def listEdgesNode(self, node_id):
-		return [self.__edges[edge] for edge in self.__edges.keys() if node_id in edge]
+		cursor = self.__database.cursor()
+		cursor.execute("SELECT * FROM edges WHERE node1 = ? or node2 = ?", (node_id, node_id))
+		return [Edge(*data) for data in cursor]
 
 	def listNeighborNodes(self, node_id):
 		neighbors = []
+		node_cursor = self.__database.cursor()
+		edge_cursor = self.__database.cursor()
+		edge_cursor.execute("SELECT node1, node2 FROM edges WHERE node1 = ? or node2 = ?",
+							(node_id, node_id))
 
-		for node1, node2 in self.__edges.keys():
-			if node_id == node1: neighbors.append( self.__nodes[node2] )
-			elif node_id == node2: neighbors.append( self.__nodes[node1] )
+		for node1, node2 in edge_cursor:
+			if node_id == node1:
+				node_cursor.execute("SELECT * FROM nodes WHERE id = ?", [node2])
+				neighbors.append( Node( *node_cursor.fetchone() ) )
+
+			elif node_id == node2:
+				node_cursor.execute("SELECT * FROM nodes WHERE id = ?", [node1])
+				neighbors.append( Node( *node_cursor.fetchone() ) )
 
 		return neighbors
 
@@ -84,13 +121,12 @@ if __name__ == '__main__':
 
 	from distributed.Graph import Processor
 
-	handler		= GraphDatabaseHandler()
-	processor	= Processor(handler)
-	transport	= TServerSocket(port = 13579)
-	tfactory	= TBufferedTransportFactory()
-	pfactory	= TBinaryProtocolFactory()
-	server		= TSimpleServer(processor, transport, tfactory, pfactory)
+	with GraphDatabaseHandler() as handler:
+		processor	= Processor(handler)
+		transport	= TServerSocket(port = 13579)
+		tfactory	= TBufferedTransportFactory()
+		pfactory	= TBinaryProtocolFactory()
+		server		= TSimpleServer(processor, transport, tfactory, pfactory)
 
-	try: server.serve()
-	except KeyboardInterrupt: pass
-	finally: print(handler)
+		try: server.serve()
+		except KeyboardInterrupt: pass

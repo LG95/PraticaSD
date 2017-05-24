@@ -20,7 +20,7 @@ def main(graphs):
 	for node_id in sample(ids, 5):
 		graphs.updateNode(node_id, 1, "*", 1.0)
 
-	for _ in xrange(25):
+	for _ in xrange(10):
 		graphs.updateEdge(choice(ids), choice(ids), 1.0, True, "*")
 
 	raw_input("Delete?")
@@ -34,26 +34,34 @@ def main(graphs):
 	raw_input("Read?")
 
 	for node_id in sample(ids, 5):
-		node = graphs.readNode(node_id)
-		if node.id is not None: print(node)
+		print( graphs.readNode(node_id) )
 
-	for _ in xrange(25):
+	for _ in xrange(10):
 		edge = graphs.readEdge(choice(ids), choice(ids))
-		if edge.node1 is not None: print(edge)
 
 	raw_input("List?")
 
 	for _ in xrange(50):
+		if edge.node1:
+			print(edge)
+
+	for _ in xrange(10):
 		nodes = graphs.listNodesEdge(choice(ids), choice(ids))
-		if nodes != []: print(nodes)
+
+		if nodes:
+			print(nodes)
 
 	for node_id in sample(ids, 5):
 		edges = graphs.listEdgesNode(node_id)
-		if edges != []: print(edges)
+
+		if edges:
+			print(edges)
 
 	for node_id in sample(ids, 5):
 		neighbors = graphs.listNeighborNodes(node_id)
-		if neighbors != []: print(neighbors)
+
+		if neighbors:
+			print(neighbors)
 
 if __name__ == '__main__':
 	from thrift.transport.TSocket		 import TSocket

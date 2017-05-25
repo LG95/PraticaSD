@@ -94,3 +94,7 @@ ENV/
 
 # Java class files
 *.class
+
+# SQLite Databases
+*.db
+

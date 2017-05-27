@@ -29,6 +29,15 @@ class GraphDatabaseHandler(object):
 
 		except OperationalError: pass
 
+	def __str__(self):
+		with self.__database as db:
+			cursor = db.cursor()
+			cursor.execute("SELECT id from nodes")
+			nodes = [row[0] for row in cursor]
+			cursor.execute("SELECT node1, node2 from edges")
+			edges = list(cursor)
+			return "Nodes: {}\nEdges: {}".format(nodes, edges)
+
 	def createNode(self, node):
 		try:
 			with self.__database as db:
@@ -139,3 +148,4 @@ if __name__ == "__main__":
 
 	try: server.serve()
 	except KeyboardInterrupt: pass
+	finally: print(handler)

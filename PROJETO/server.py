@@ -117,7 +117,7 @@ if __name__ == '__main__':
 	from thrift.transport.TSocket 		 import TServerSocket
 	from thrift.transport.TTransport 	 import TBufferedTransportFactory
 	from thrift.protocol.TBinaryProtocol import TBinaryProtocolFactory
-	from thrift.server.TServer 			 import TSimpleServer
+	from thrift.server.TServer 			 import TForkingServer
 
 	from distributed.Graph import Processor
 
@@ -126,7 +126,7 @@ if __name__ == '__main__':
 		transport	= TServerSocket(port = 13579)
 		tfactory	= TBufferedTransportFactory()
 		pfactory	= TBinaryProtocolFactory()
-		server		= TSimpleServer(processor, transport, tfactory, pfactory)
+		server		= TForkingServer(processor, transport, tfactory, pfactory)
 
 		try: server.serve()
 		except KeyboardInterrupt: pass

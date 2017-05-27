@@ -2,9 +2,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 from distributed.ttypes import Edge, Node
 
-from functools import wraps
 from sqlite3 import connect, IntegrityError, OperationalError
-from sys import stderr
 
 class Database(object):
 	def __init__(self, name):
